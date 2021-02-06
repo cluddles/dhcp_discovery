@@ -1,0 +1,6 @@
+__pycache__
+*.out
+*.bak
+secrets.py
+hosts
+scapy
