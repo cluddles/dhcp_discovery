@@ -139,7 +139,7 @@ def profile_device(dhcp_fingerprint, macaddr, vendor_class_id):
     except requests.exceptions.HTTPError as err:
         log_fingerbank_error(err, response)
         return -1
-    except Exception as e:
+    except Exception as err:
         print(f"Error occurred: {err}")
         return -1
  
