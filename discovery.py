@@ -136,21 +136,18 @@ def profile_device(dhcp_fingerprint, macaddr, vendor_class_id):
         headers=headers, 
         params=params, 
         data=json.dumps(data))
+        log_fingerbank_response(response.json())
+        # If score is less than 30, there is very little confidence on the returned profile. Ignore it.
+        if (response.json()['score'] < confidence_threshold):
+            print("Low confidence")
+            return "unrecognised"
+        return response.json()['device']['name']
     except requests.exceptions.HTTPError as err:
         log_fingerbank_error(err, response)
-        return -1
     except Exception as err:
         print(f"Error occurred: {err}")
-        return -1
- 
-    log_fingerbank_response(response.json())
 
-     # If score is less than 30, there is very little confidence on the returned profile. Ignore it.
-    if (response.json()['score'] < confidence_threshold):
-        print("Low confidence")
-        return "unrecognised"
-    
-    return response.json()['device']['name']
+    return -1
 
 '''
 Update the hosts file with <hostname>-<profile> for hostname
