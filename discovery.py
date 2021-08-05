@@ -62,25 +62,21 @@ def log_fingerbank_error(e, response):
         401: "This request is unauthorized. Either your key is invalid or wasn't specified."
     }
     print(responses.get(response.status_code, "Fingerbank API returned some unknown error"))
-    return
 
 def log_packet_info(packet):
-    # print(packet.summary())
-    # print(ls(packet))
-    # print('---')
-    # print('Packet:', packet.summary())
-    print('\n[{:%Y-%m-%d %H:%M:%S}]: {}'.format(datetime.datetime.now(), packet.summary()))
-    if verbose:
-        types = {
-            1: "DHCP Discover",
-            2: "DHCP Offer",
-            3: "DHCP Request",
-            5: "DHCP Ack",
-            8: "DHCP Inform"
-        }
-        if DHCP in packet:
-            print(types.get(packet[DHCP].options[0][1], "Some Other DHCP Packet"))
-    return
+    packet_type = ''
+    types = {
+        1: "DHCP Discover",
+        2: "DHCP Offer",
+        3: "DHCP Request",
+        5: "DHCP Ack",
+        8: "DHCP Inform"
+    }
+    if DHCP in packet:
+        packet_type = types.get(packet[DHCP].options[0][1], "Some Other DHCP Packet")
+    else:
+        packet_type = "Unhandled"
+    print('\n[{:%Y-%m-%d %H:%M:%S}]: {} - {}'.format(datetime.datetime.now(), packet.summary(), packet_type))
 
 def log_fingerbank_response(json_response):
     #print(json.dumps(json_response, indent=4))
@@ -121,7 +117,6 @@ def handle_dhcp_packet(packet):
             update_hosts_file(requested_addr, hostname, device_profile)
     # Python why you hate flushing?
     sys.stdout.flush()
-    return
 
 def profile_device(dhcp_fingerprint, macaddr, vendor_class_id):
     if dhcp_fingerprint is None:
@@ -150,7 +145,7 @@ def profile_device(dhcp_fingerprint, macaddr, vendor_class_id):
     except Exception as err:
         print(f"Error occurred: {err}")
 
-    return -1
+    return None
 
 '''
 Update the hosts file based on address, hostname, profile if required
@@ -158,22 +153,22 @@ Update the hosts file based on address, hostname, profile if required
 
 def update_hosts_file(address, hostname, profile):
     copyfile("/etc/hosts", "hosts")
-    etchostname = address
+    etchostname = None
     if hostname is not None:
         etchostname = hostname
     elif profile is not None:
         etchostname = address + "-" + re.sub("[^A-Za-z0-9]", "_", profile)
 
-    hosts = Hosts(path='hosts')
-    hosts.remove_all_matching(address=address)
-    new_entry = HostsEntry(entry_type='ipv4', address=address, names=[etchostname])
-    hosts.add([new_entry])
-    hosts.write()
-    copyfile("hosts", "/etc/hosts")
+    if etchostname is not None:
+        hosts = Hosts(path='hosts')
+        hosts.remove_all_matching(address=address)
+        new_entry = HostsEntry(entry_type='ipv4', address=address, names=[etchostname])
+        hosts.add([new_entry])
+        hosts.write()
+        copyfile("hosts", "/etc/hosts")
 
-    if verbose:
-        print(f"Updated hostsfile: {address} = {etchostname}")
-
+        if verbose:
+            print(f"Updated hostsfile: {address} = {etchostname}")
 
 print("Starting\n", flush=True)
 # Require libpcap to use filtering
