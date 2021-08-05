@@ -39,6 +39,7 @@ Global stuff
 interface = "eth0"
 fingerbank_url = 'https://api.fingerbank.org/api/v2/combinations/interrogate'
 confidence_threshold = 25
+verbose = False
 headers = {
     'Content-Type': 'application/json',
 }
@@ -69,15 +70,16 @@ def log_packet_info(packet):
     # print('---')
     # print('Packet:', packet.summary())
     print('\n[{:%Y-%m-%d %H:%M:%S}]: {}'.format(datetime.datetime.now(), packet.summary()))
-    # types = {
-    #     1: "DHCP Discover",
-    #     2: "DHCP Offer",
-    #     3: "DHCP Request",
-    #     5: "DHCP Ack",
-    #     8: "DHCP Inform"
-    # }
-    # if DHCP in packet:
-    #     print(types.get(packet[DHCP].options[0][1], "Some Other DHCP Packet"))
+    if verbose:
+        types = {
+            1: "DHCP Discover",
+            2: "DHCP Offer",
+            3: "DHCP Request",
+            5: "DHCP Ack",
+            8: "DHCP Inform"
+        }
+        if DHCP in packet:
+            print(types.get(packet[DHCP].options[0][1], "Some Other DHCP Packet"))
     return
 
 def log_fingerbank_response(json_response):
@@ -107,12 +109,15 @@ def handle_dhcp_packet(packet):
     log_packet_info(packet)
     if DHCP in packet:
         requested_addr = get_option(packet[DHCP].options, 'requested_addr')
-        hostname = get_option(packet[DHCP].options, 'hostname')
-        param_req_list = get_option(packet[DHCP].options, 'param_req_list')
-        vendor_class_id = get_option(packet[DHCP].options, 'vendor_class_id')
-        print(f"Host {hostname} ({packet[Ether].src}) requested {requested_addr}.")
-        device_profile = profile_device(param_req_list, packet[Ether].src, vendor_class_id)
-        if ((device_profile != -1) and requested_addr):
+        if requested_addr is not None:
+            hostname = get_option(packet[DHCP].options, 'hostname')
+            param_req_list = get_option(packet[DHCP].options, 'param_req_list')
+            vendor_class_id = get_option(packet[DHCP].options, 'vendor_class_id')
+            print(f"Host {hostname} ({packet[Ether].src}) requested {requested_addr}")
+            # Only bother profiling the device if it doesn't have a name
+            device_profile = ""
+            if hostname is None:
+                device_profile = profile_device(param_req_list, packet[Ether].src, vendor_class_id)
             update_hosts_file(requested_addr, hostname, device_profile)
     # Python why you hate flushing?
     sys.stdout.flush()
@@ -126,7 +131,8 @@ def profile_device(dhcp_fingerprint, macaddr, vendor_class_id):
     data['debug'] = 'on'
     data['mac'] = macaddr
     data['vendor_class_id'] = vendor_class_id
-    # print(f"Will attempt to profile using {dhcp_fingerprint}, {macaddr}, and {vendor_class_id}")
+    if verbose:
+        print(f"Will attempt to profile using {dhcp_fingerprint}, {macaddr}, and {vendor_class_id}")
 
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -136,10 +142,8 @@ def profile_device(dhcp_fingerprint, macaddr, vendor_class_id):
         params=params, 
         data=json.dumps(data))
         log_fingerbank_response(response.json())
-        # If score is less than 30, there is very little confidence on the returned profile. Ignore it.
-        if (response.json()['score'] < confidence_threshold):
-            print("Low confidence")
-            return "unrecognised"
+        if response.json()['score'] < confidence_threshold:
+            return 'unknown'
         return response.json()['device']['name']
     except requests.exceptions.HTTPError as err:
         log_fingerbank_error(err, response)
@@ -149,30 +153,28 @@ def profile_device(dhcp_fingerprint, macaddr, vendor_class_id):
     return -1
 
 '''
-Update the hosts file with <hostname>-<profile> for hostname
+Update the hosts file based on address, hostname, profile if required
 '''
 
 def update_hosts_file(address, hostname, profile):
-    if profile is not None:
-        copyfile("/etc/hosts", "hosts")
-        etchostname = profile.replace(" ", "_")
-        if hostname:
-            etchostname = hostname
-        elif address:
-            # etchostname = etchostname + "-" + address.replace(".", "_")
-            etchostname = etchostname + "-" + address
-        # print(f"Updating hostname as: {etchostname} with {address}")
+    copyfile("/etc/hosts", "hosts")
+    etchostname = address
+    if hostname is not None:
+        etchostname = hostname
+    elif profile is not None:
+        etchostname = address + "-" + re.sub("[^A-Za-z0-9]", "_", profile)
 
-        hosts = Hosts(path='hosts')
-        hosts.remove_all_matching(address=address)
-        new_entry = HostsEntry(entry_type='ipv4', address=address, names=[etchostname])
-        hosts.add([new_entry])
-        hosts.write()
-        copyfile("hosts", "/etc/hosts")
+    hosts = Hosts(path='hosts')
+    hosts.remove_all_matching(address=address)
+    new_entry = HostsEntry(entry_type='ipv4', address=address, names=[etchostname])
+    hosts.add([new_entry])
+    hosts.write()
+    copyfile("hosts", "/etc/hosts")
 
-        # print(f"Updated Host name for hostsfile is {etchostname}")
+    if verbose:
+        print(f"Updated hostsfile: {address} = {etchostname}")
 
-            
+
 print("Starting\n", flush=True)
 # Require libpcap to use filtering
 # Will sniff (and log) eeeeeeeverything otherwise, which is obviously not useful
