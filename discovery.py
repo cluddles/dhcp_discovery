@@ -64,21 +64,20 @@ def log_fingerbank_error(e, response):
     return
 
 def log_packet_info(packet):
-    #print(packet.summary())
-    #print(ls(packet))
-    #print('---')
-    #print('Packet:', packet.summary())
-    print('\n--- {:%Y-%m-%d %H:%M:%S} ---'.format(datetime.datetime.now()))
-    print('Packet:', packet.summary())
-    types = {
-        1: "DHCP Discover",
-        2: "DHCP Offer",
-        3: "DHCP Request",
-        5: "DHCP Ack",
-        8: "DHCP Inform"
-    }
-    if DHCP in packet:
-        print(types.get(packet[DHCP].options[0][1], "Some Other DHCP Packet"))
+    # print(packet.summary())
+    # print(ls(packet))
+    # print('---')
+    # print('Packet:', packet.summary())
+    print('\n[{:%Y-%m-%d %H:%M:%S}]: {}'.format(datetime.datetime.now(), packet.summary()))
+    # types = {
+    #     1: "DHCP Discover",
+    #     2: "DHCP Offer",
+    #     3: "DHCP Request",
+    #     5: "DHCP Ack",
+    #     8: "DHCP Inform"
+    # }
+    # if DHCP in packet:
+    #     print(types.get(packet[DHCP].options[0][1], "Some Other DHCP Packet"))
     return
 
 def log_fingerbank_response(json_response):
@@ -127,7 +126,7 @@ def profile_device(dhcp_fingerprint, macaddr, vendor_class_id):
     data['debug'] = 'on'
     data['mac'] = macaddr
     data['vendor_class_id'] = vendor_class_id
-    print(f"Will attempt to profile using {dhcp_fingerprint}, {macaddr}, and {vendor_class_id}")
+    # print(f"Will attempt to profile using {dhcp_fingerprint}, {macaddr}, and {vendor_class_id}")
 
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -158,22 +157,25 @@ def update_hosts_file(address, hostname, profile):
         copyfile("/etc/hosts", "hosts")
         etchostname = profile.replace(" ", "_")
         if hostname:
-            etchostname = etchostname + "-" + hostname
+            etchostname = hostname
         elif address:
-            etchostname = etchostname + "-" + address.replace(".", "_")
-        print(f"Updating hostname as: {etchostname} with {address}")
+            # etchostname = etchostname + "-" + address.replace(".", "_")
+            etchostname = etchostname + "-" + address
+        # print(f"Updating hostname as: {etchostname} with {address}")
 
         hosts = Hosts(path='hosts')
-        hosts.remove_all_matching(name=etchostname)
+        hosts.remove_all_matching(address=address)
         new_entry = HostsEntry(entry_type='ipv4', address=address, names=[etchostname])
         hosts.add([new_entry])
         hosts.write()
         copyfile("hosts", "/etc/hosts")
 
-        print(f"Updated Host name for hostsfile is {etchostname}")
+        # print(f"Updated Host name for hostsfile is {etchostname}")
 
             
 print("Starting\n", flush=True)
+# Require libpcap to use filtering
+# Will sniff (and log) eeeeeeeverything otherwise, which is obviously not useful
 sniff(iface = interface, filter='udp and (port 67 or 68)', prn = handle_dhcp_packet, store = 0)
 print("\n Shutting down...", flush=True)
 
