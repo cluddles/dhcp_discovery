@@ -120,7 +120,7 @@ def handle_dhcp_packet(packet):
 
 def profile_device(dhcp_fingerprint, macaddr, vendor_class_id):
     if dhcp_fingerprint is None:
-        return -1
+        return None
     data = {}
     data['dhcp_fingerprint'] = ','.join(map(str, dhcp_fingerprint))
     data['debug'] = 'on'
