@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # This seems to do the job
 # Make sure you've cd-ed into the relevant discovery dir
 

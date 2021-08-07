@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  discovery:
+    build:
+      context: .
+    volumes:
+      - ../secrets.py:/app/secrets.py
+    network_mode: host
