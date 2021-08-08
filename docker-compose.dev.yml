@@ -5,5 +5,7 @@ services:
     build:
       context: .
     volumes:
-      - ../secrets.py:/app/secrets.py
+      - ./:/app
+      - ./scratch/secrets.py:/app/secrets.py
+      - ./scratch/hosts:/etc/hosts
     network_mode: host
