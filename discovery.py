@@ -168,8 +168,9 @@ def profile_device(dhcp_fingerprint, macaddr, vendor_class_id):
         params=params, 
         data=json.dumps(data))
         log_fingerbank_response(response.json())
+        # Filter out profiles that we have little confidence in
         if response.json()['score'] < confidence_threshold:
-            return 'unknown'
+            return None
         return response.json()['device']['name']
     except requests.exceptions.HTTPError as err:
         log_fingerbank_error(err, response)
@@ -190,6 +191,8 @@ def update_hosts_file(address, hostname, profile):
     elif profile is not None:
         chosen_name = address + "-" + re.sub("[^A-Za-z0-9]", "_", profile)
 
+    # TODO should we remove hosts entries, to avoid stale data?
+    # Do we need to differentiate between low confidence data, no data and error?
     if chosen_name is not None:
         hosts = Hosts(path='hosts')
         hosts.remove_all_matching(address=address)
