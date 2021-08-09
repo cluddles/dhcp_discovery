@@ -1,4 +1,4 @@
-name: CI to Docker Hub
+name: CI to Docker Hub - version tag
 
 on:
   push:
@@ -23,7 +23,7 @@ jobs:
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v1
-        
+
       - name: Cache Docker layers
         uses: actions/cache@v2
         with:
@@ -31,7 +31,7 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-
-            
+
       - name: Build and push
         id: docker_build
         uses: docker/build-push-action@v2
@@ -40,9 +40,9 @@ jobs:
           file: ./Dockerfile
           builder: ${{ steps.buildx.outputs.name }}
           push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/dhcp_discovery:latest
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/dhcp_discovery:${{ steps.vars.outputs.tag }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
-          
+
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}

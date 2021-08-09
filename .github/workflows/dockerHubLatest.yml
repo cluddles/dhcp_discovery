@@ -1,4 +1,4 @@
-name: CI to GHCR 
+name: CI to Docker Hub - latest
 
 on:
   push:
@@ -10,8 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-      - name: Checkout
+      - name: Check Out Repo 
         uses: actions/checkout@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
       - name: Set up Docker Buildx
         id: buildx
@@ -25,23 +31,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      - name: Login to ghcr
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.ghcr_TOKEN }}
-
       - name: Build and push
         id: docker_build
         uses: docker/build-push-action@v2
         with:
-          context: ./ 
+          context: ./
           file: ./Dockerfile
           builder: ${{ steps.buildx.outputs.name }}
           push: true
-          tags: ghcr.io/cluddles/dhcp_discovery:latest
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/dhcp_discovery:latest
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
 
