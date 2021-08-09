@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 
 '''
-Based on original gist by drath (MIT license):
- https://gist.github.com/drath/07bdeef0259bd68747a82ff80a5e350c
-
 When using Pihole for DNS without DHCP, the admin interface only displays
-clients as IP addresses.
+clients as IP addresses. Depending on how many devices you have on your network
+and/or how great your memory is, this may not be the most intuitive thing in the
+world.
 
-This utility sniffs for DHCP traffic (requests in particular), and records
-IP address and corresponding hostnames in /etc/hosts.
+This utility sniffs for DHCP traffic (mainly DHCP requests, but occasionally
+other packets are also useful), and records IP address and corresponding
+hostnames in /etc/hosts. For any unnamed devices, we attempt to profile the
+device (using fingerbank.org) to generate some kind of meaningful simulated
+hostname.
 
-For any unnamed devices, we attempt to profile the device using
-fingerbank.org to generate some kind of meaningful simulated hostname.
-
-Pihole will pick up the /etc/hosts names and display them in the UI.
+Pihole will pick up hostnames based on /etc/hosts records and display them in the UI.
 
 - Requires fingerbank API key (https://api.fingerbank.org/users/register) in
   a secrets.py file.
@@ -21,6 +20,9 @@ Pihole will pick up the /etc/hosts names and display them in the UI.
 - Requires libpcap to be installed (via tcpdump, for instance)
 
 - Attempts to modify /etc/hosts, so needs to run as root
+
+Based on original gist by drath (under MIT license):
+ https://gist.github.com/drath/07bdeef0259bd68747a82ff80a5e350c
 
 License: MIT.
 
