@@ -11,6 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+      - name: Get the tag name
+        run: echo "TAG=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
+        
       - name: Check Out Repo 
         uses: actions/checkout@v2
 
@@ -40,7 +43,7 @@ jobs:
           file: ./Dockerfile
           builder: ${{ steps.buildx.outputs.name }}
           push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/dhcp_discovery:${{ steps.vars.outputs.tag }}
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/dhcp_discovery:${{ env.TAG }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
 
